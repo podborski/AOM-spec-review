@@ -54,7 +54,9 @@ def get_rows(table):
 
 def process_comments_document():
     parser = ArgumentParser(description="Process comments document")
-    parser.add_argument("-i", "--comments_document", help="Path to comments document", required=True)
+    parser.add_argument(
+        "-i", help="Path to comments document", dest="comments_document", required=True
+    )
     parser.add_argument("-n", "--dry_run", help="Dry run", action="store_true")
 
     # Check if access token is set
