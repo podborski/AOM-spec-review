@@ -6,12 +6,19 @@ import subprocess
 from docx import Document
 from github import Github, Auth
 from argparse import ArgumentParser
+from loguru import logger
 
 LABELS = {
     "ed": "editorial",
     "ge": "general",
     "te": "technical",
 }
+
+
+def assert_log(condition, message):
+    if not condition:
+        logger.error(message)
+        raise AssertionError(message)
 
 
 def check_if_github_cli_is_installed():
@@ -27,8 +34,8 @@ def check_if_github_cli_is_installed():
 
 def get_rows(table):
     # There should be 6 columns
-    assert len(table.columns) == 6, "Table should have exactly 6 columns"
-    assert len(table.rows) > 1, "Table should have at least one row"
+    assert_log(len(table.columns) == 6, "Table should have exactly 6 columns")
+    assert_log(len(table.rows) > 1, "Table should have at least one row")
 
     rows = []
     for i, row in enumerate(table.rows):
@@ -48,7 +55,8 @@ def get_rows(table):
                     else:
                         parsed_text += run.text
             cell_values.append(parsed_text)
-        rows.append(cell_values)
+        if any([c != "" for c in cell_values]):
+            rows.append(cell_values)
     return rows
 
 
@@ -70,23 +78,23 @@ def process_comments_document():
     args = parser.parse_args()
     document = Document(args.comments_document)
 
-    # Get header and GitHub repository
-    header = document.sections[0].header.paragraphs[0].text
-    github_repo = re.search(r"github\.com\/(.+)\s*", header).group(1)
+    # Get GitHub repository and version from header
+    version = document.sections[0].header.tables[0].rows[1].cells[1].text
+    github_repo = document.sections[0].header.tables[0].rows[0].cells[2].text
+    github_repo = re.search(r"github\.com\/(.+)\s*", github_repo).group(1)
     repo = git.get_repo(github_repo)
-    print(f"GitHub repo: {github_repo}")
 
     # Get existing issues
     all_issues = repo.get_issues(state="all")
     existing_ids = set()
     for issue in all_issues:
-        issue_id = re.search(r"id: (.+) ", issue.body)
+        issue_id = re.search(r"<!-- id: (.+) -->", issue.body)
         if issue_id:
             issue_id = issue_id.group(1)
             existing_ids.add(issue_id)
 
     # Process table
-    assert len(document.tables) == 1, "Document should have exactly one table"
+    assert_log(len(document.tables) == 1, "Document should have exactly one table")
     table = document.tables[0]
     rows = get_rows(table)
 
@@ -94,11 +102,22 @@ def process_comments_document():
 
     # Create issues
     for row in rows:
-        assert row[0] in LABELS, f"Label {row[0]} does not exist"
+        # Process labels
+        labels = []
+        if row[0].strip() != "":
+            for label in row[0].split(","):
+                s_label = label.strip()
+                assert_log(s_label in LABELS, f"Invalid label: {s_label}")
+                labels.append(f"{LABELS[s_label]} comment")
 
-        label = LABELS[row[0]] + " comment"
-        clause = f"§{row[2]}"
-        title = f"{clause}: {row[3]}"
+        # Process clauses and title
+        if row[2].strip() != "":
+            clause = [f"§{c.strip()}" for c in row[2].split(",")]
+            clause = ", ".join(clause)
+            title = f"{clause}: {row[3]}"
+        else:
+            title = row[3]
+
         comment = row[4]
         suggestion = row[5]
 
@@ -106,25 +125,26 @@ def process_comments_document():
         id_hash = hashlib.sha1(raw_id.encode("utf-8")).hexdigest()
 
         if id_hash in existing_ids:
-            print(f"Skipping existing issue: {title}")
+            logger.info(f"Skipping existing issue: {title}")
             continue
 
-        body = f"""
-<!-- id: {id_hash} -->
+        body = f"<!-- id: {id_hash} -->\n"
+        body += f"_Comment for: {version}_\n"
 
-#### Comment:
-{comment}
+        if comment == "":
+            logger.warning(f"No comment for: {title}, skipping...")
+            continue
+        body += f"\n#### Comment:\n{comment}\n"
 
------
-#### Suggestion:
-{suggestion}
-"""
+        if suggestion != "":
+            body += f"\n-----\n#### Suggestion:\n{suggestion}\n"
 
         if args.dry_run:
-            print(f"Would create issue: {title}")
+            logger.info(f"Would create issue: {title}")
+            logger.debug(f"\n{body}")
             continue
 
-        print(f"Creating issue: {title}")
-        repo.create_issue(title=title, body=body, labels=[label])
+        logger.success(f"Creating issue: {title}")
+        repo.create_issue(title=title, body=body, labels=labels)
 
-    print("Done")
+    logger.success("Done")

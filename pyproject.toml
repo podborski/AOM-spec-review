@@ -10,6 +10,7 @@ packages = [{ include = "issue_automation" }]
 python = "^3.11"
 python-docx = "^0.8.11"
 pygithub = "^1.59.0"
+loguru = "^0.7.0"
 
 
 [build-system]
