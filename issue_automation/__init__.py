@@ -9,9 +9,9 @@ from argparse import ArgumentParser
 from loguru import logger
 
 LABELS = {
-    "ed": "editorial comment",
-    "ge": "general comment",
-    "te": "technical comment",
+    "ed": "editorial",
+    "ge": "general",
+    "te": "technical",
     "?": "question",
 }
 
