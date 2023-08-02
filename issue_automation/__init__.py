@@ -9,9 +9,10 @@ from argparse import ArgumentParser
 from loguru import logger
 
 LABELS = {
-    "ed": "editorial",
-    "ge": "general",
-    "te": "technical",
+    "ed": "editorial comment",
+    "ge": "general comment",
+    "te": "technical comment",
+    "?": "question",
 }
 
 
@@ -108,7 +109,7 @@ def process_comments_document():
             for label in row[0].split(","):
                 s_label = label.strip()
                 assert_log(s_label in LABELS, f"Invalid label: {s_label}")
-                labels.append(f"{LABELS[s_label]} comment")
+                labels.append(LABELS[s_label])
 
         # Process clauses and title
         if row[2].strip() != "":
