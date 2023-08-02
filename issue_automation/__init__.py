@@ -33,6 +33,24 @@ def check_if_github_cli_is_installed():
         sys.exit(1)
 
 
+def create_issue_meta(rows):
+    # Add header
+    header = ["Version", "Source", "Clause(s)"]
+    rows.insert(0, header)
+
+    # Create table
+    table = ""
+    for i, row in enumerate(rows):
+        table += "|"
+        table += "|".join(row)
+        table += "|\n"
+        if i == 0:
+            table += "|"
+            table += "|".join([":---:"] * len(row))
+            table += "|\n"
+    return table
+
+
 def get_rows(table):
     # There should be 6 columns
     assert_log(len(table.columns) == 6, "Table should have exactly 6 columns")
@@ -119,8 +137,14 @@ def process_comments_document():
         else:
             title = row[3]
 
+        # Get rest of the data
+        source = row[1]
         comment = row[4]
         suggestion = row[5]
+
+        if source == "":
+            source = "Unknown"
+            logger.warning(f"No source for: {title}, setting to 'Unknown'")
 
         raw_id = f"{title}{comment}{suggestion}"
         id_hash = hashlib.sha1(raw_id.encode("utf-8")).hexdigest()
@@ -130,7 +154,8 @@ def process_comments_document():
             continue
 
         body = f"<!-- id: {id_hash} -->\n"
-        body += f"_Comment for: {version}_\n"
+        body += create_issue_meta([[version, source, clause or "all"]])
+        body += "\n"
 
         if comment == "":
             logger.warning(f"No comment for: {title}, skipping...")
