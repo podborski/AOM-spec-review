@@ -54,7 +54,7 @@ def get_rows(table):
 
 def process_comments_document():
     parser = ArgumentParser(description="Process comments document")
-    parser.add_argument("-i", "--comments_document", help="Path to comments document")
+    parser.add_argument("-i", "--comments_document", help="Path to comments document", required=True)
     parser.add_argument("-n", "--dry_run", help="Dry run", action="store_true")
 
     # Check if access token is set
@@ -68,13 +68,14 @@ def process_comments_document():
     args = parser.parse_args()
     document = Document(args.comments_document)
 
-    # Get header
+    # Get header and GitHub repository
     header = document.sections[0].header.paragraphs[0].text
     github_repo = re.search(r"github\.com\/(.+)\s*", header).group(1)
+    repo = git.get_repo(github_repo)
     print(f"GitHub repo: {github_repo}")
 
     # Get existing issues
-    all_issues = git.get_repo(github_repo).get_issues(state="open")
+    all_issues = repo.get_issues(state="all")
     existing_ids = set()
     for issue in all_issues:
         issue_id = re.search(r"id: (.+) ", issue.body)
@@ -122,6 +123,6 @@ def process_comments_document():
             continue
 
         print(f"Creating issue: {title}")
-        git.get_repo(github_repo).create_issue(title=title, body=body, labels=[label])
+        repo.create_issue(title=title, body=body, labels=[label])
 
     print("Done")
