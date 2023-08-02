@@ -1,6 +1,7 @@
 import os
 import re
 import sys
+import hashlib
 import subprocess
 from docx import Document
 from github import Github, Auth
@@ -62,7 +63,7 @@ def process_comments_document():
 
     # Initialize Github
     auth = Auth.Token(auth_token)
-    g = Github(auth=auth)
+    git = Github(auth=auth)
 
     args = parser.parse_args()
     document = Document(args.comments_document)
@@ -71,6 +72,15 @@ def process_comments_document():
     header = document.sections[0].header.paragraphs[0].text
     github_repo = re.search(r"github\.com\/(.+)\s*", header).group(1)
     print(f"GitHub repo: {github_repo}")
+
+    # Get existing issues
+    all_issues = git.get_repo(github_repo).get_issues(state="open")
+    existing_ids = set()
+    for issue in all_issues:
+        issue_id = re.search(r"id: (.+) ", issue.body)
+        if issue_id:
+            issue_id = issue_id.group(1)
+            existing_ids.add(issue_id)
 
     # Process table
     assert len(document.tables) == 1, "Document should have exactly one table"
@@ -81,12 +91,37 @@ def process_comments_document():
 
     # Create issues
     for row in rows:
-        # TODO: assert label exists
+        assert row[0] in LABELS, f"Label {row[0]} does not exist"
 
         label = LABELS[row[0]] + " comment"
-        clause = row[2]
-        title = row[3]
+        clause = f"§{row[2]}"
+        title = f"{clause}: {row[3]}"
         comment = row[4]
         suggestion = row[5]
 
-        # TODO: WIP create issue
+        raw_id = f"{title}{comment}{suggestion}"
+        id_hash = hashlib.sha1(raw_id.encode("utf-8")).hexdigest()
+
+        if id_hash in existing_ids:
+            print(f"Skipping existing issue: {title}")
+            continue
+
+        body = f"""
+<!-- id: {id_hash} -->
+
+#### Comment:
+{comment}
+
+-----
+#### Suggestion:
+{suggestion}
+"""
+
+        if args.dry_run:
+            print(f"Would create issue: {title}")
+            continue
+
+        print(f"Creating issue: {title}")
+        git.get_repo(github_repo).create_issue(title=title, body=body, labels=[label])
+
+    print("Done")
