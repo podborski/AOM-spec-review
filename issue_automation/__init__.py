@@ -64,6 +64,10 @@ def get_rows(table):
         for cell in row.cells:
             parsed_text = ""
             for paragraph in cell.paragraphs:
+                if "spec" in paragraph.style.name:
+                    parsed_text += f"<blockquote>\n{paragraph.text}\n</blockquote>"
+                    continue
+
                 if "code" in paragraph.style.name:
                     parsed_text += f"\n```\n{paragraph.text}\n```\n"
                     continue
@@ -140,7 +144,7 @@ def process_comments_document():
             title = row[3]
 
         # Get rest of the data
-        source = row[1]
+        source = row[1].strip()
         comment = row[4]
         suggestion = row[5]
 
