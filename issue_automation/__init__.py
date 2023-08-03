@@ -130,6 +130,7 @@ def process_comments_document():
                 labels.append(LABELS[s_label])
 
         # Process clauses and title
+        clause = None
         if row[2].strip() != "":
             clause = [f"§{c.strip()}" for c in row[2].split(",")]
             clause = ", ".join(clause)
