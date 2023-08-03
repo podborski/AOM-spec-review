@@ -135,13 +135,13 @@ def process_comments_document():
     parser.add_argument(
         "-t",
         "--only-type",
-        help="Only process type, either string or 'all'. Must be seperated by comma",
+        help="Only process type, either string or 'all'. Must be separated by comma",
         type=str,
     )
     parser.add_argument(
         "-c",
         "--only-clause",
-        help="Only process clause, either number or 'all'. Must be seperated by comma",
+        help="Only process clause, either number or 'all'. Must be separated by comma",
         type=str,
     )
     parser.add_argument("-n", "--dry_run", help="Dry run", action="store_true")
