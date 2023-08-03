@@ -20,10 +20,10 @@ make sure you don't copy other styles into the document. Use only the 3 styles l
 The script will not open duplicate issues. (a uniqe hash is stored as metadata in every issue to avoid that).
 You can re-distribute the consolidated comment document and re-run the script anytime.
 
-you will need poetry on your system
+You will need to have the poetry tool (https://python-poetry.org/docs/) installed on your system.
 
-when executing for the first time run `poetry install`
+When executing for the first time run `poetry install`
 
-provide a few examples on how to use it
+Todo: Provide a few examples on how to use it
 
-mention the filtering stuff
+Todo: Mention the filtering stuff
