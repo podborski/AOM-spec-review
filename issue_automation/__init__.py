@@ -27,7 +27,7 @@ def check_if_github_cli_is_installed():
     try:
         subprocess.check_output(["gh", "--version"])
     except FileNotFoundError:
-        print(
+        logger.critical(
             "Github CLI is not installed. Please install it from https://cli.github.com"
         )
         sys.exit(1)
@@ -78,16 +78,28 @@ def get_rows(table):
                     else:
                         parsed_text += run.text
                 parsed_text += "\n"
-            cell_values.append(parsed_text)
-        if any([c != "" for c in cell_values]):
+            cell_values.append(parsed_text.strip())
+        if any(c != "" for c in cell_values):
             rows.append(cell_values)
     return rows
 
 
 def process_comments_document():
+    # Change logger format
+    logger.remove()  # All configured handlers are removed
+    fmt = "<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <level>{message}</level>"
+    logger.add(sys.stderr, format=fmt)
+
     parser = ArgumentParser(description="Process comments document")
     parser.add_argument(
         "-i", help="Path to comments document", dest="comments_document", required=True
+    )
+    parser.add_argument("-l", "--limit", help="Limit number of issues", type=int)
+    parser.add_argument(
+        "-c",
+        "--only-clause",
+        help="Only process clause, either number or 'all'. Must be seperated by comma",
+        type=str,
     )
     parser.add_argument("-n", "--dry_run", help="Dry run", action="store_true")
 
@@ -122,13 +134,14 @@ def process_comments_document():
     table = document.tables[0]
     rows = get_rows(table)
 
-    print(f"Found {len(rows)} comments")
+    logger.info(f"Found {len(rows)} comments")
 
     # Create issues
+    issues_created = 0
     for row in rows:
         # Process labels
         labels = []
-        if row[0].strip() != "":
+        if row[0] != "":
             for label in row[0].split(","):
                 s_label = label.strip()
                 assert_log(s_label in LABELS, f"Invalid label: {s_label}")
@@ -136,15 +149,30 @@ def process_comments_document():
 
         # Process clauses and title
         clause = None
-        if row[2].strip() != "":
+        if row[2] != "":
             clause = [f"§{c.strip()}" for c in row[2].split(",")]
             clause = ", ".join(clause)
             title = f"{clause}: {row[3]}"
         else:
             title = row[3]
 
+        if args.only_clause:
+            if not clause:
+                match = "all" in args.only_clause
+            else:
+                match = any(
+                    re.search(rf"(?<!\.){c.strip()}", clause)
+                    for c in args.only_clause.split(",")
+                )
+
+            if not match:
+                logger.info(
+                    f"Skipping {row[3]} as it is not in clause {args.only_clause}"
+                )
+                continue
+
         # Get rest of the data
-        source = row[1].strip()
+        source = row[1]
         comment = row[4]
         suggestion = row[5]
 
@@ -178,5 +206,10 @@ def process_comments_document():
 
         logger.success(f"Creating issue: {title}")
         repo.create_issue(title=title, body=body, labels=labels)
+
+        if args.limit and issues_created >= args.limit:
+            logger.info(f"Reached limit of {args.limit} issues")
+            break
+        issues_created += 1
 
     logger.success("Done")
