@@ -1,13 +1,12 @@
-# How to use Issue Automation Scripts
+# Additional information
 
-In your system you need to have [Python](https://www.python.org) installed. This project uses poetry to create a virtual environment and install dependencies. It won't interfere with your system Python installation. To setup poetry follow the instructions [here](https://python-poetry.org/docs/#installation). Then in the root directory of this repository run:
-
-```bash
-poetry install
-```
+In this readme we provide additional information on how to write the entries in the word document and how to run the pythnon script to open GitHub issues based on that document.
 
 ## How to write comments
 
+Here are best practices on how to write the word document.
+
+### Styles
 The provided template has 3 styles which you can use when preparing your feedback.
 
 - `Normal`: Your comment
@@ -16,9 +15,26 @@ The provided template has 3 styles which you can use when preparing your feedbac
 
 Make sure you don't copy other styles into the document. Use only the 3 styles listed above whenever possible.
 
-## How to use scirpt to open issues
+### Comment types
+We define several comment types:
 
-When you finalize your comments document, the automation script can be used to open issues in the repository. The script will not open duplicate issues. (a uniqe hash is stored as metadata in every issue to avoid that). You can re-distribute the consolidated comment document and re-run the script anytime.
+- `ed`: Editorial which will be linked to `editorial` label wehen opening issues on GitHub
+- `te`: Technical which will be linked to `technical` label wehen opening issues on GitHub
+- `ge`: General which will be linked to `general` label wehen opening issues on GitHub
+- `?`: Question which will be linked to `question` label wehen opening issues on GitHub
+- `!`: AOM internal discussion only, when putting this into the comment type no issue will be opened.
+
+You can combine multiple types by separating them with a comma like this: `ed, ?`.
+
+## How to use the scirpt to open issues
+
+In your system you need to have [Python](https://www.python.org) installed. This project uses poetry to create a virtual environment and install dependencies. It won't interfere with your system Python installation. To setup poetry follow the instructions [here](https://python-poetry.org/docs/#installation). Then in the root directory of this repository run:
+
+```bash
+poetry install
+```
+
+When you finalize your comments document, the automation script can be used to open issues in the repository. The script will not open duplicate issues. (a unique hash is stored as metadata in every issue to avoid that). You can re-distribute the consolidated comment document and re-run the script anytime.
 
 ```bash
 usage: process-comments-document [-h] -i COMMENTS_DOCUMENT [-l LIMIT] [-t ONLY_TYPE] [-c ONLY_CLAUSE] [-n]
