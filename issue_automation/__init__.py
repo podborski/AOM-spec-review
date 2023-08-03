@@ -98,7 +98,7 @@ def process_comments_document():
     parser.add_argument(
         "-t",
         "--only-type",
-        help="Only process type. Must be seperated by comma",
+        help="Only process type, either number or 'all'. Must be seperated by comma",
         type=str,
     )
     parser.add_argument(
@@ -235,4 +235,4 @@ def process_comments_document():
             break
         issues_created += 1
 
-    logger.success("Done")
+    logger.success(f"Done, processed {issues_created}")
