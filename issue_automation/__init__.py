@@ -97,7 +97,7 @@ def process_comments_document():
 
     # Initialize Github
     auth = Auth.Token(auth_token)
-    git = Github(auth=auth)
+    git = Github(auth=auth, retry=10)
 
     args = parser.parse_args()
     document = Document(args.comments_document)
