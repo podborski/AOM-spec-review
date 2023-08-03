@@ -73,6 +73,7 @@ def get_rows(table):
                         parsed_text += f"`{run.text}`"
                     else:
                         parsed_text += run.text
+                parsed_text += "\n"
             cell_values.append(parsed_text)
         if any([c != "" for c in cell_values]):
             rows.append(cell_values)
