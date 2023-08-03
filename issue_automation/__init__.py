@@ -65,7 +65,7 @@ def get_rows(table):
             parsed_text = ""
             for paragraph in cell.paragraphs:
                 if "spec" in paragraph.style.name:
-                    parsed_text += f"<blockquote>\n{paragraph.text}\n</blockquote>"
+                    parsed_text += f"<blockquote>\n{paragraph.text}\n</blockquote>\n\n"
                     continue
 
                 if "code" in paragraph.style.name:
@@ -96,6 +96,12 @@ def process_comments_document():
     )
     parser.add_argument("-l", "--limit", help="Limit number of issues", type=int)
     parser.add_argument(
+        "-t",
+        "--only-type",
+        help="Only process type. Must be seperated by comma",
+        type=str,
+    )
+    parser.add_argument(
         "-c",
         "--only-clause",
         help="Only process clause, either number or 'all'. Must be seperated by comma",
@@ -109,7 +115,7 @@ def process_comments_document():
 
     # Initialize Github
     auth = Auth.Token(auth_token)
-    git = Github(auth=auth, retry=10)
+    git = Github(auth=auth)
 
     args = parser.parse_args()
     document = Document(args.comments_document)
@@ -147,6 +153,22 @@ def process_comments_document():
                 assert_log(s_label in LABELS, f"Invalid label: {s_label}")
                 labels.append(LABELS[s_label])
 
+        # Check if type is in only_type
+        if args.only_type:
+            if row[0] == "":
+                match = "all" in args.only_type
+            else:
+                match = any(
+                    t.strip().lower() in row[0].lower()
+                    for t in args.only_type.split(",")
+                )
+
+            if not match:
+                logger.info(
+                    f"Skipping {row[3]} as it is not in type(s) [{args.only_type}]"
+                )
+                continue
+
         # Process clauses and title
         clause = None
         if row[2] != "":
@@ -156,6 +178,7 @@ def process_comments_document():
         else:
             title = row[3]
 
+        # Check if clause is in only_clause
         if args.only_clause:
             if not clause:
                 match = "all" in args.only_clause
@@ -167,7 +190,7 @@ def process_comments_document():
 
             if not match:
                 logger.info(
-                    f"Skipping {row[3]} as it is not in clause {args.only_clause}"
+                    f"Skipping {row[3]} as it is not in clause(s) [{args.only_clause}]"
                 )
                 continue
 
