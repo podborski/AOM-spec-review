@@ -4,9 +4,11 @@ import sys
 import hashlib
 import subprocess
 from docx import Document
+from loguru import logger
 from github import Github, Auth
 from argparse import ArgumentParser
-from loguru import logger
+
+from issue_automation.helpers import RateLimitRetry
 
 LABELS = {
     "ed": "editorial",
@@ -115,7 +117,7 @@ def process_comments_document():
 
     # Initialize Github
     auth = Auth.Token(auth_token)
-    git = Github(auth=auth)
+    git = Github(auth=auth, retry=RateLimitRetry(total=10, backoff_factor=0.1))
 
     args = parser.parse_args()
     document = Document(args.comments_document)
