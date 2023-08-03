@@ -47,9 +47,9 @@ options:
   -l LIMIT, --limit LIMIT
                         Limit number of issues
   -t ONLY_TYPE, --only-type ONLY_TYPE
-                        Only process type, either string or 'all'. Must be separated  by comma
+                        Only process type, either string or 'all'. Must be separated by comma
   -c ONLY_CLAUSE, --only-clause ONLY_CLAUSE
-                        Only process clause, either number or 'all'. Must be separated  by comma
+                        Only process clause, either number or 'all'. Must be separated by comma
   -n, --dry_run         Dry run
 ```
 

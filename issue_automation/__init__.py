@@ -236,6 +236,11 @@ def process_comments_document():
                 issues_skipped += 1
                 continue
 
+        # If comment is internal, skip
+        if clause and "!" in clause:
+            logger.warning(f"Skipping internal comment: {row[3]}")
+            continue
+
         # Get rest of the data
         source = row[1]
         comment = row[4]
