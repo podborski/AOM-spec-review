@@ -43,6 +43,7 @@ These examples provide different scenarios of how to use the script. If you only
 
 <details>
 <summary>Open issues for only <code>technical</code> comments</summary>
+
 ```bash
 poetry run process-comments-document -- -i AOM_comments_iamf.docx -t te
 ```
@@ -50,6 +51,7 @@ poetry run process-comments-document -- -i AOM_comments_iamf.docx -t te
 
 <details>
 <summary>Open issues for only <code>technical</code> and <code>editorial</code> comments</summary>
+
 ```bash
 poetry run process-comments-document -- -i AOM_comments_iamf.docx -t te,ed
 ```
@@ -57,6 +59,7 @@ poetry run process-comments-document -- -i AOM_comments_iamf.docx -t te,ed
 
 <details>
 <summary>Open issues for only clause <code>2</code> and its sub-clauses</summary>
+
 ```bash
 poetry run process-comments-document -- -i AOM_comments_iamf.docx -c 2
 ```
@@ -64,6 +67,7 @@ poetry run process-comments-document -- -i AOM_comments_iamf.docx -c 2
 
 <details>
 <summary>Open issues for comments that don't specify a clause</summary>
+  
 ```bash
 poetry run process-comments-document -- -i AOM_comments_iamf.docx -c all
 ```
@@ -71,6 +75,7 @@ poetry run process-comments-document -- -i AOM_comments_iamf.docx -c all
 
 <details>
 <summary>Open only 10 issues</summary>
+
 ```bash
 poetry run process-comments-document -- -i AOM_comments_iamf.docx -l 10
 ```
@@ -78,6 +83,7 @@ poetry run process-comments-document -- -i AOM_comments_iamf.docx -l 10
 
 <details>
 <summary>Do a dry run to see how the issues would be opened</summary>
+
 ```bash
 poetry run process-comments-document -- -i AOM_comments_iamf.docx -n
 ```
