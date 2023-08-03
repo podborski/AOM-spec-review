@@ -98,7 +98,7 @@ def process_comments_document():
     parser.add_argument(
         "-t",
         "--only-type",
-        help="Only process type, either number or 'all'. Must be seperated by comma",
+        help="Only process type, either string or 'all'. Must be seperated by comma",
         type=str,
     )
     parser.add_argument(
@@ -130,6 +130,8 @@ def process_comments_document():
     all_issues = repo.get_issues(state="all")
     existing_ids = set()
     for issue in all_issues:
+        if issue.body is None:
+            continue
         issue_id = re.search(r"<!-- id: (.+) -->", issue.body)
         if issue_id:
             issue_id = issue_id.group(1)
@@ -144,6 +146,7 @@ def process_comments_document():
 
     # Create issues
     issues_created = 0
+    issues_skipped = 0
     for row in rows:
         # Process labels
         labels = []
@@ -167,6 +170,7 @@ def process_comments_document():
                 logger.info(
                     f"Skipping {row[3]} as it is not in type(s) [{args.only_type}]"
                 )
+                issues_skipped += 1
                 continue
 
         # Process clauses and title
@@ -192,6 +196,7 @@ def process_comments_document():
                 logger.info(
                     f"Skipping {row[3]} as it is not in clause(s) [{args.only_clause}]"
                 )
+                issues_skipped += 1
                 continue
 
         # Get rest of the data
@@ -208,6 +213,7 @@ def process_comments_document():
 
         if id_hash in existing_ids:
             logger.info(f"Skipping existing issue: {title}")
+            issues_skipped += 1
             continue
 
         body = f"<!-- id: {id_hash} -->\n"
@@ -216,23 +222,24 @@ def process_comments_document():
 
         if comment == "":
             logger.warning(f"No comment for: {title}, skipping...")
+            issues_skipped += 1
             continue
         body += f"\n#### Comment:\n{comment}\n"
 
         if suggestion != "":
             body += f"\n-----\n#### Suggestion:\n{suggestion}\n"
 
-        if args.dry_run:
-            logger.info(f"Would create issue: {title}")
-            logger.debug(f"\n{body}")
-            continue
-
-        logger.success(f"Creating issue: {title}")
-        repo.create_issue(title=title, body=body, labels=labels)
-
         if args.limit and issues_created >= args.limit:
             logger.info(f"Reached limit of {args.limit} issues")
             break
-        issues_created += 1
 
-    logger.success(f"Done, processed {issues_created}")
+        if args.dry_run:
+            logger.info(f"Would create issue: {title}")
+            logger.debug(f"\n{body}")
+            issues_created += 1
+        else:
+            logger.success(f"Creating issue: {title}")
+            repo.create_issue(title=title, body=body, labels=labels)
+            issues_created += 1
+
+    logger.success(f"created={issues_created} skipped={issues_skipped}")
