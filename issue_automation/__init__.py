@@ -43,7 +43,7 @@ from loguru import logger
 from github import Github, Auth
 from argparse import ArgumentParser
 
-from issue_automation.helpers import RateLimitRetry
+from issue_automation.helpers import RateLimitRetry, add_hyperlink
 
 LABELS = {
     "ed": "editorial",
@@ -55,7 +55,7 @@ LABELS = {
 
 def assert_log(condition, message):
     if not condition:
-        logger.error(message)
+        logger.critical(message)
         raise AssertionError(message)
 
 
@@ -88,12 +88,12 @@ def create_issue_meta(rows):
     return table
 
 
-def get_rows(table):
+def get_comments(table):
     # There should be 6 columns
     assert_log(len(table.columns) == 6, "Table should have exactly 6 columns")
     assert_log(len(table.rows) > 1, "Table should have at least one row")
 
-    rows = []
+    comments = []
     for i, row in enumerate(table.rows):
         if i == 0:
             continue
@@ -117,74 +117,15 @@ def get_rows(table):
                 parsed_text += "\n"
             cell_values.append(parsed_text.strip())
         if any(c != "" for c in cell_values):
-            rows.append(cell_values)
-    return rows
+            comments.append(cell_values)
+    return comments
 
 
-def process_comments_document():
-    # Change logger format
-    logger.remove()  # All configured handlers are removed
-    fmt = "<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <level>{message}</level>"
-    logger.add(sys.stderr, format=fmt)
-
-    parser = ArgumentParser(description="Process comments document")
-    parser.add_argument(
-        "-i", help="Path to comments document", dest="comments_document", required=True
-    )
-    parser.add_argument("-l", "--limit", help="Limit number of issues", type=int)
-    parser.add_argument(
-        "-t",
-        "--only-type",
-        help="Only process type, either string or 'all'. Must be separated by comma",
-        type=str,
-    )
-    parser.add_argument(
-        "-c",
-        "--only-clause",
-        help="Only process clause, either number or 'all'. Must be separated by comma",
-        type=str,
-    )
-    parser.add_argument("-n", "--dry_run", help="Dry run", action="store_true")
-
-    # Check if access token is set
-    check_if_github_cli_is_installed()
-    auth_token = os.popen("gh auth token").read().strip()
-
-    # Initialize Github
-    auth = Auth.Token(auth_token)
-    git = Github(auth=auth, retry=RateLimitRetry(total=10, backoff_factor=0.1))
-
-    args = parser.parse_args()
-    document = Document(args.comments_document)
-
-    # Get GitHub repository and version from header
-    version = document.sections[0].header.tables[0].rows[1].cells[1].text
-    github_repo = document.sections[0].header.tables[0].rows[0].cells[2].text
-    github_repo = re.search(r"github\.com\/(.+)\s*", github_repo).group(1)
-    repo = git.get_repo(github_repo)
-
-    # Get existing issues
-    all_issues = repo.get_issues(state="all")
-    existing_ids = set()
-    for issue in all_issues:
-        if issue.body is None:
-            continue
-        issue_id = re.search(r"<!-- id: (.+) -->", issue.body)
-        if issue_id:
-            issue_id = issue_id.group(1)
-            existing_ids.add(issue_id)
-
-    # Process table
-    assert_log(len(document.tables) == 1, "Document should have exactly one table")
-    table = document.tables[0]
-    rows = get_rows(table)
-
-    logger.info(f"Found {len(rows)} comments")
-
-    # Create issues
+def create_issues(comments, repo, version, existing_ids, args):
+    created_issues = {}
     issues_created = 0
     issues_skipped = 0
-    for row in rows:
+    for i, row in enumerate(comments):
         # Process labels
         labels = []
         if row[0] != "":
@@ -278,10 +219,117 @@ def process_comments_document():
         if args.dry_run:
             logger.info(f"Would create issue: {title}")
             logger.debug(f"\n{body}")
-            issues_created += 1
+            issues_skipped += 1
         else:
             logger.success(f"Creating issue: {title}")
-            repo.create_issue(title=title, body=body, labels=labels)
+            issue = repo.create_issue(title=title, body=body, labels=labels)
             issues_created += 1
+            created_issues[i] = issue.html_url
 
     logger.success(f"created={issues_created} skipped={issues_skipped}")
+    return created_issues
+
+
+def process_comments_document():
+    # Change logger format
+    logger.remove()  # All configured handlers are removed
+    fmt = "<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <level>{message}</level>"
+    logger.add(sys.stderr, format=fmt)
+
+    parser = ArgumentParser(description="Process comments document")
+    parser.add_argument(
+        "-i", help="Path to comments document", dest="comments_document", required=True
+    )
+    parser.add_argument("-l", "--limit", help="Limit number of issues", type=int)
+    parser.add_argument(
+        "-t",
+        "--only-type",
+        help="Only process type, either string or 'all'. Must be separated by comma",
+        type=str,
+    )
+    parser.add_argument(
+        "-c",
+        "--only-clause",
+        help="Only process clause, either number or 'all'. Must be separated by comma",
+        type=str,
+    )
+    parser.add_argument(
+        "--link-titles",
+        help="Link comment titles to created issues",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--output-document",
+        help="Output document with links embedded to title",
+        dest="output_document",
+    )
+    parser.add_argument("-n", "--dry_run", help="Dry run", action="store_true")
+
+    # Check arguments
+    args = parser.parse_args()
+    assert_log(
+        not args.link_titles ^ (args.output_document is not None),
+        "Both --link-titles and --output-document must be set",
+    )
+    assert_log(
+        os.path.exists(args.comments_document),
+        f"Comments document does not exist: {args.comments_document}",
+    )
+
+    # Check if access token is set
+    check_if_github_cli_is_installed()
+    auth_token = os.popen("gh auth token").read().strip()
+
+    # Initialize Github
+    auth = Auth.Token(auth_token)
+    git = Github(auth=auth, retry=RateLimitRetry(total=10, backoff_factor=0.1))
+
+    document = Document(args.comments_document)
+
+    # Get GitHub repository and version from header
+    version = document.sections[0].header.tables[0].rows[1].cells[1].text
+    github_repo = document.sections[0].header.tables[0].rows[0].cells[2].text
+    github_repo = re.search(r"github\.com\/(.+)\s*", github_repo).group(1)
+    repo = git.get_repo(github_repo)
+
+    # Get existing issues
+    all_issues = repo.get_issues(state="all")
+    existing_ids = set()
+    for issue in all_issues:
+        if issue.body is None:
+            continue
+        issue_id = re.search(r"<!-- id: (.+) -->", issue.body)
+        if issue_id:
+            issue_id = issue_id.group(1)
+            existing_ids.add(issue_id)
+
+    # Process table
+    assert_log(len(document.tables) == 1, "Document should have exactly one table")
+    table = document.tables[0]
+    comments = get_comments(table)
+
+    logger.info(f"Found {len(comments)} comments")
+
+    # Create issues
+    issues = create_issues(comments, repo, version, existing_ids, args)
+
+    # Add links to titles
+    if not args.link_titles or args.dry_run or len(issues.keys()) == 0:
+        return
+
+    logger.info("Adding links to titles")
+
+    # If output document already exists, update it
+    if os.path.exists(args.output_document):
+        document = Document(args.output_document)
+        table = document.tables[0]
+
+    for i, row in enumerate(table.rows[1:]):
+        if i not in issues:
+            continue
+        cell = row.cells[3]
+        add_hyperlink(cell.paragraphs[0], issues[i], cell.text)
+
+    # Save document
+    document.save("test.docx")
+    logger.success(f"Saved document to {args.output_document}")
