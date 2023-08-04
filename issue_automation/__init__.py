@@ -331,5 +331,5 @@ def process_comments_document():
         add_hyperlink(cell.paragraphs[0], issues[i], cell.text)
 
     # Save document
-    document.save("test.docx")
+    document.save(args.output_document)
     logger.success(f"Saved document to {args.output_document}")
