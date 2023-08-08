@@ -2,7 +2,7 @@
 name = "issue-automation"
 version = "0.1.0"
 description = ""
-authors = ["Deniz Ugur <denizugur@users.noreply.github.com>"]
+authors = ["Deniz Ugur <denizugur@users.noreply.github.com>", "Dimitri Podborski <podborski@users.noreply.github.com>"]
 readme = "README.md"
 packages = [{ include = "issue_automation" }]
 

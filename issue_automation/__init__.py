@@ -134,19 +134,19 @@ def create_issues(comments, repo, version, existing_ids, args):
                 assert_log(s_label in LABELS, f"Invalid label: {s_label}")
                 labels.append(LABELS[s_label])
 
-        # Check if type is in only_type
-        if args.only_type:
+        # Check if type is in type_filter
+        if args.type_filter:
             if row[0] == "":
-                match = "all" in args.only_type
+                match = "all" in args.type_filter
             else:
                 match = any(
                     t.strip().lower() in row[0].lower()
-                    for t in args.only_type.split(",")
+                    for t in args.type_filter.split(",")
                 )
 
             if not match:
                 logger.info(
-                    f"Skipping {row[3]} as it is not in type(s) [{args.only_type}]"
+                    f"Skipping {row[3]} as it is not in type(s) [{args.type_filter}]"
                 )
                 issues_skipped += 1
                 continue
@@ -160,19 +160,19 @@ def create_issues(comments, repo, version, existing_ids, args):
         else:
             title = row[3]
 
-        # Check if clause is in only_clause
-        if args.only_clause:
+        # Check if clause is in clause_filter
+        if args.clause_filter:
             if not clause:
-                match = "all" in args.only_clause
+                match = "all" in args.clause_filter
             else:
                 match = any(
                     re.search(rf"(?<!\.){c.strip()}", clause)
-                    for c in args.only_clause.split(",")
+                    for c in args.clause_filter.split(",")
                 )
 
             if not match:
                 logger.info(
-                    f"Skipping {row[3]} as it is not in clause(s) [{args.only_clause}]"
+                    f"Skipping {row[3]} as it is not in clause(s) [{args.clause_filter}]"
                 )
                 issues_skipped += 1
                 continue
@@ -243,14 +243,14 @@ def process_comments_document():
     parser.add_argument("-l", "--limit", help="Limit number of issues", type=int)
     parser.add_argument(
         "-t",
-        "--only-type",
-        help="Only process type, either string or 'all'. Must be separated by comma",
+        "--type-filter",
+        help="Only process type, either string or 'all'. Must be separated by a comma",
         type=str,
     )
     parser.add_argument(
         "-c",
-        "--only-clause",
-        help="Only process clause, either number or 'all'. Must be separated by comma",
+        "--clause-filter",
+        help="Only process clause, either number or 'all'. Must be separated by a comma",
         type=str,
     )
     parser.add_argument(

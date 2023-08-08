@@ -37,7 +37,7 @@ poetry install
 When you finalize your comments document, the automation script can be used to open issues in the repository. The script will not open duplicate issues. (a unique hash is stored as metadata in every issue to avoid that). You can re-distribute the consolidated comment document and re-run the script anytime.
 
 ```bash
-usage: process-comments-document [-h] -i COMMENTS_DOCUMENT [-l LIMIT] [-t ONLY_TYPE] [-c ONLY_CLAUSE] [-n]
+usage: process-comments-document [-h] -i COMMENTS_DOCUMENT [-l LIMIT] [-t TYPE_FILTER] [-c CLAUSE_FILTER] [-n]
 
 Process comments document
 
@@ -46,10 +46,10 @@ options:
   -i COMMENTS_DOCUMENT  Path to comments document
   -l LIMIT, --limit LIMIT
                         Limit number of issues
-  -t ONLY_TYPE, --only-type ONLY_TYPE
-                        Only process type, either string or 'all'. Must be separated by comma
-  -c ONLY_CLAUSE, --only-clause ONLY_CLAUSE
-                        Only process clause, either number or 'all'. Must be separated by comma
+  -t TYPE_FILTER, --type-filter TYPE_FILTER
+                        Only process type, either string or 'all'. Must be separated by a comma
+  -c CLAUSE_FILTER, --clause-filter CLAUSE_FILTER
+                        Only process clause, either number or 'all'. Must be separated by a comma
   -n, --dry_run         Dry run
 ```
 
